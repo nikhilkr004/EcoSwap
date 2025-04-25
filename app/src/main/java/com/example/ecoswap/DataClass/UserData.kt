@@ -11,5 +11,6 @@ data class UserData(
     val password: String? =null,
     val profileImageUrl: String? = null,
     val location: Map<String, Double>? = null,
-    val joinedAt: Timestamp? =null,  // Store as timestamp in millis
+    val joinedAt: Timestamp? =null, // Store as timestamp in millis
+    val ecoPoint: Int?=null
 )

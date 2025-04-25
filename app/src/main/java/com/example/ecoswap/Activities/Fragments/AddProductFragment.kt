@@ -190,11 +190,20 @@ class AddProductFragment : Fragment() {
                 swapType="Free"
             ))
             .addOnSuccessListener {
-                Toast.makeText(requireContext(),
-                    "Uploaded!", Toast.LENGTH_SHORT).show()
-                binding.uploadBtn.text="Upload Product"
-                binding.uploadBtn.isEnabled=true
-                reset()
+
+                // ✅ Update user's EcoPoints
+                val userRef = db.collection("users").document(uid)
+                userRef.get().addOnSuccessListener { doc ->
+                    val currentPoints = doc.getLong("ecoPoints") ?: 0
+                    userRef.update("ecoPoints", currentPoints + 10)
+
+                    Toast.makeText(requireContext(),
+                        "Uploaded!", Toast.LENGTH_SHORT).show()
+                    binding.uploadBtn.text="Upload Product"
+                    binding.uploadBtn.isEnabled=true
+                    reset()
+                }
+
             }
     }
 

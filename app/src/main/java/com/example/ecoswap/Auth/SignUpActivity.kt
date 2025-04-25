@@ -142,7 +142,8 @@ class SignUpActivity : AppCompatActivity() {
                     password        = password,
                     profileImageUrl = "",
                     location        = locMap,
-                    joinedAt        = Timestamp.now()
+                    joinedAt        = Timestamp.now(),
+                    ecoPoint = 10
                 )
 
                 db.collection("users")
