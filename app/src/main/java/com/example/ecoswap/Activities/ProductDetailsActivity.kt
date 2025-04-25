@@ -3,11 +3,13 @@ package com.example.ecoswap.Activities
 import ImagesPagerAdapter
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.viewpager2.widget.ViewPager2
+import com.example.ecoswap.DataClass.UserData
 import com.example.ecoswap.R
 import com.example.ecoswap.databinding.ActivityProductDetailsBinding
 import com.google.firebase.auth.FirebaseAuth
@@ -34,8 +36,8 @@ class ProductDetailsActivity : AppCompatActivity() {
         val title       = intent.getStringExtra("title")
         val description = intent.getStringExtra("description")
         val category    = intent.getStringExtra("category")
-        val avaliblity    = intent.getStringExtra("avaliblity")
-        val userId    = intent.getStringExtra("userid")
+        val avaliblity  = intent.getStringExtra("avaliblity")
+        val userId      = intent.getStringExtra("userid")
         val imageUrls   = intent.getStringArrayListExtra("imageUrls") ?: arrayListOf()
         val lat         = intent.getDoubleExtra("latitude",  0.0)
         val lng         = intent.getDoubleExtra("longitude", 0.0)
@@ -43,6 +45,7 @@ class ProductDetailsActivity : AppCompatActivity() {
 
         binding.avaliblity.text=avaliblity.toString()
         binding.productTitle.text=title.toString()
+        binding.disc.text=description.toString()
 
         ///fetch user data like user image , name ,address more
 
@@ -54,10 +57,29 @@ class ProductDetailsActivity : AppCompatActivity() {
 
     private fun fetchUserdata(userId: String) {
 
-        val auth= FirebaseAuth.getInstance()
-        val db= FirebaseFirestore.getInstance()
+
+        val db = FirebaseFirestore.getInstance()
 
 
+        if (userId.isNotEmpty()) {
+            db.collection("users").document(userId).get()
+                .addOnSuccessListener { document ->
+                    if (document.exists()) {
+                        val user = document.toObject(UserData::class.java)
+
+                        if (user!=null){
+                            binding.byUser.text="By:${user.name.toString()}"
+                        }
+                    } else {
+                        Toast.makeText(this, "User data not found", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .addOnFailureListener { e ->
+                    Toast.makeText(this, "Failed to fetch data: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+        } else {
+            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show()
+        }
     }
 
     @SuppressLint("SetTextI18n")
