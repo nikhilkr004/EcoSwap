@@ -76,12 +76,7 @@ class HomeFragment : Fragment() {
         }
     }
 
-    /**
-     * Fetches products, optionally filtered by category.
-     *
-     * @param category If null -> all products; otherwise only products where
-     *                 field "category" == category.
-     */
+
     private fun fetchProducts(category: String? = null) {
         val userId = auth.currentUser?.uid ?: return
 
@@ -89,7 +84,7 @@ class HomeFragment : Fragment() {
         db.collection("users").document(userId).get()
             .addOnSuccessListener { userDoc ->
                 val uLocMap = userDoc.get("location") as? Map<*, *> ?: return@addOnSuccessListener
-                val uLat = uLocMap["latitude"]  as? Double ?: return@addOnSuccessListener
+                val uLat = uLocMap["latitude"] as? Double ?: return@addOnSuccessListener
                 val uLng = uLocMap["longitude"] as? Double ?: return@addOnSuccessListener
 
                 // 2. Build query by category if any
@@ -104,17 +99,26 @@ class HomeFragment : Fragment() {
                         // 4. Map docs to pairs of (ProductData, distance)
                         val listWithDist = snap.documents.mapNotNull { doc ->
                             val prod = doc.toObject(ProductData::class.java) ?: return@mapNotNull null
+
+                            // ❌ Skip if current user owns the product
+                            if (prod.postedBy == userId) return@mapNotNull null
+
                             val pLoc = doc.get("location") as? Map<*, *> ?: return@mapNotNull null
-                            val pLat = pLoc["latitude"]  as? Double ?: return@mapNotNull null
+                            val pLat = pLoc["latitude"] as? Double ?: return@mapNotNull null
                             val pLng = pLoc["longitude"] as? Double ?: return@mapNotNull null
-                            // calculate distance in meters
+
+                            // Calculate distance
                             val dist = android.location.Location("").apply {
-                                latitude  = uLat; longitude = uLng
+                                latitude = uLat
+                                longitude = uLng
                             }.distanceTo(android.location.Location("").apply {
-                                latitude  = pLat; longitude = pLng
+                                latitude = pLat
+                                longitude = pLng
                             })
+
                             prod to dist
                         }
+
                         // 5. Sort by distance, extract products
                         val sorted = listWithDist.sortedBy { it.second }.map { it.first }
 
@@ -124,11 +128,14 @@ class HomeFragment : Fragment() {
                         productAdapter.notifyDataSetChanged()
                     }
                     .addOnFailureListener { e ->
-                        Toast.makeText(requireContext(),
+                        Toast.makeText(
+                            requireContext(),
                             "Failed to fetch products: ${e.message}",
-                            Toast.LENGTH_SHORT).show()
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
             }
     }
+
 
 }

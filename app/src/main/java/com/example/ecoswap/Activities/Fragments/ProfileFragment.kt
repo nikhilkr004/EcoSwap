@@ -1,5 +1,6 @@
 package com.example.ecoswap.Activities.Fragments
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -7,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import com.bumptech.glide.Glide
+import com.example.ecoswap.Activities.SwapRequestedActivity
 import com.example.ecoswap.DataClass.UserData
 import com.example.ecoswap.R
 import com.example.ecoswap.databinding.FragmentProfileBinding
@@ -33,6 +35,9 @@ class ProfileFragment : Fragment() {
         db= FirebaseFirestore.getInstance()
         auth= FirebaseAuth.getInstance()
 
+        binding.allRequestProduct.setOnClickListener {
+            startActivity(Intent(requireContext(), SwapRequestedActivity::class.java))
+        }
 
         fetchUserProfileData()
         return binding.root

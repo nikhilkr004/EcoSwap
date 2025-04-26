@@ -2,10 +2,13 @@ package com.example.ecoswap.Auth
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
+import android.location.LocationManager
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -50,9 +53,9 @@ class SignUpActivity : AppCompatActivity() {
         }
 
         binding.continuee.setOnClickListener {
-            val name     = binding.name.text.toString().trim()
-            val email    = binding.email.text.toString().trim()
-            val phone    = binding.phone.text.toString().trim()
+            val name = binding.name.text.toString().trim()
+            val email = binding.email.text.toString().trim()
+            val phone = binding.phone.text.toString().trim()
             val password = binding.password.text.toString().trim()
 
             when {
@@ -60,9 +63,11 @@ class SignUpActivity : AppCompatActivity() {
                     Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
 
                 userLatitude == null || userLongitude == null ->
-                    Toast.makeText(this,
+                    Toast.makeText(
+                        this,
                         "Please click 'Get Location Permission' first",
-                        Toast.LENGTH_SHORT).show()
+                        Toast.LENGTH_SHORT
+                    ).show()
 
                 else -> signUpUser(name, email, phone, password)
             }
@@ -70,18 +75,37 @@ class SignUpActivity : AppCompatActivity() {
     }
 
     private fun checkLocationPermissionAndFetch() {
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_FINE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
         ) {
-            fetchCurrentLocation()
+            if (isLocationEnabled()) {
+                fetchCurrentLocation()
+            } else {
+                Toast.makeText(this, "Please enable location services", Toast.LENGTH_SHORT).show()
+                startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            }
         } else {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ),
                 LOCATION_PERMISSION_CODE
             )
         }
+    }
+
+    private fun isLocationEnabled(): Boolean {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 
     override fun onRequestPermissionsResult(
@@ -89,9 +113,15 @@ class SignUpActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == LOCATION_PERMISSION_CODE &&
-            grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
+            grantResults.isNotEmpty() &&
+            grantResults.all { it == PackageManager.PERMISSION_GRANTED }
         ) {
-            fetchCurrentLocation()
+            if (isLocationEnabled()) {
+                fetchCurrentLocation()
+            } else {
+                Toast.makeText(this, "Please enable location services", Toast.LENGTH_SHORT).show()
+                startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            }
         } else {
             Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show()
         }
@@ -104,18 +134,35 @@ class SignUpActivity : AppCompatActivity() {
             CancellationTokenSource().token
         ).addOnSuccessListener { loc: Location? ->
             if (loc != null) {
-                userLatitude  = loc.latitude
+                userLatitude = loc.latitude
                 userLongitude = loc.longitude
-                Toast.makeText(this,
+                Toast.makeText(
+                    this,
                     "Location saved: $userLatitude, $userLongitude",
-                    Toast.LENGTH_SHORT).show()
+                    Toast.LENGTH_SHORT
+                ).show()
             } else {
-                Toast.makeText(this,
-                    "Unable to fetch location", Toast.LENGTH_SHORT).show()
+                // Fallback: Use last known location if current location is null
+                fusedLocationClient.lastLocation
+                    .addOnSuccessListener { lastLoc ->
+                        if (lastLoc != null) {
+                            userLatitude = lastLoc.latitude
+                            userLongitude = lastLoc.longitude
+                            Toast.makeText(
+                                this,
+                                "Location (last known) saved: $userLatitude, $userLongitude",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            Toast.makeText(this, "Unable to fetch location", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(this, "Location error: ${it.message}", Toast.LENGTH_SHORT).show()
+                    }
             }
         }.addOnFailureListener {
-            Toast.makeText(this,
-                "Location error: ${it.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Location error: ${it.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -130,19 +177,19 @@ class SignUpActivity : AppCompatActivity() {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnSuccessListener {
                 val locMap = mapOf(
-                    "latitude"  to userLatitude!!,
+                    "latitude" to userLatitude!!,
                     "longitude" to userLongitude!!
                 )
 
                 val user = UserData(
-                    uid             = auth.currentUser!!.uid,
-                    name            = name,
-                    email           = email,
-                    phone           = phone,
-                    password        = password,
+                    uid = auth.currentUser!!.uid,
+                    name = name,
+                    email = email,
+                    phone = phone,
+                    password = password,
                     profileImageUrl = "",
-                    location        = locMap,
-                    joinedAt        = Timestamp.now(),
+                    location = locMap,
+                    joinedAt = Timestamp.now(),
                     ecoPoint = 10
                 )
 
@@ -151,21 +198,18 @@ class SignUpActivity : AppCompatActivity() {
                     .set(user)
                     .addOnSuccessListener {
                         Utils.hideLoadingDialog()
-                        Toast.makeText(this,
-                            "Sign Up Successful", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "Sign Up Successful", Toast.LENGTH_SHORT).show()
                         startActivity(Intent(this, MainActivity::class.java))
                         finish()
                     }
                     .addOnFailureListener { e ->
                         Utils.hideLoadingDialog()
-                        Toast.makeText(this,
-                            "Save failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "Save failed: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
             }
             .addOnFailureListener { e ->
                 Utils.hideLoadingDialog()
-                Toast.makeText(this,
-                    "Signup Failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Signup Failed: ${e.message}", Toast.LENGTH_SHORT).show()
             }
     }
 }

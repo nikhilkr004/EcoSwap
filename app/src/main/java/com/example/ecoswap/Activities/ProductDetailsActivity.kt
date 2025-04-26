@@ -37,6 +37,7 @@ class ProductDetailsActivity : AppCompatActivity() {
         auth = FirebaseAuth.getInstance()
 
 
+
 ///finish the activity
         binding.backBtn.setOnClickListener {
             finish()
@@ -150,6 +151,9 @@ class ProductDetailsActivity : AppCompatActivity() {
             return
         }
 
+
+
+
         val db = FirebaseFirestore.getInstance()
 
         // Fetch the product details from Firestore
@@ -239,6 +243,9 @@ class ProductDetailsActivity : AppCompatActivity() {
                 Toast.makeText(this, "Failed to check request", Toast.LENGTH_SHORT).show()
             }
     }
+
+
+
 
 }
 

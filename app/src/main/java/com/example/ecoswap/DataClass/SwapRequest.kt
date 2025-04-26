@@ -5,6 +5,6 @@ data class SwapRequest(
     val senderId: String = "",
     val receiverId: String = "",
     val productId: String = "",
-    val status: String = "pending",          // pending, accepted, rejected
+    var status: String = "pending",          // pending, accepted, rejected
     val timestamp: com.google.firebase.Timestamp? = null
 )
