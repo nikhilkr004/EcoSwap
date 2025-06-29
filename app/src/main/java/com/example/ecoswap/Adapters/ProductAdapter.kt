@@ -35,6 +35,11 @@ class ProductAdapter(
                 onItemClick(item)
             }
 
+
+
+
+
+
             // Distance calculation...
             fetchUserLocationAndCalculateDistance(context, item.location)
         }

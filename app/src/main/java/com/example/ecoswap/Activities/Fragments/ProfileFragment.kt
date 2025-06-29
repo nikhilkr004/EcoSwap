@@ -54,13 +54,13 @@ class ProfileFragment : Fragment() {
                     if (document.exists()) {
                         val name = document.getString("name")
                         val email = document.getString("email")
-                        val ecoPoints=document.getString("ecoPoints")
+//                        val ecoPoints=document.getString("ecoPoints")!!.toInt()
                         val profileImage = document.getString("profileImageUrl")
 
                         // Now you can use the data, for example:
                         binding.username.text = name.toString()
                         binding.email.text = email.toString()
-                        binding.ecoPointNumber.text=ecoPoints.toString()
+//                        binding.ecoPointNumber.text=ecoPoints.toString()
 
                         // Load profile image using Glide
                         Glide.with(this)

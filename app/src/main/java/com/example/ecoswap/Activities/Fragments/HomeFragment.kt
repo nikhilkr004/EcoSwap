@@ -100,7 +100,6 @@ class HomeFragment : Fragment() {
                         val listWithDist = snap.documents.mapNotNull { doc ->
                             val prod = doc.toObject(ProductData::class.java) ?: return@mapNotNull null
 
-                            // ❌ Skip if current user owns the product
                             if (prod.postedBy == userId) return@mapNotNull null
 
                             val pLoc = doc.get("location") as? Map<*, *> ?: return@mapNotNull null

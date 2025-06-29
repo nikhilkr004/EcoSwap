@@ -3,6 +3,7 @@ package com.example.ecoswap.Activities
 import ImagesPagerAdapter
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -17,6 +18,7 @@ import com.example.ecoswap.databinding.ActivityProductDetailsBinding
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+
 
 class ProductDetailsActivity : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth
@@ -55,12 +57,15 @@ class ProductDetailsActivity : AppCompatActivity() {
         val lng = intent.getDoubleExtra("longitude", 0.0)
         val currentUserId = auth.currentUser!!.uid
 
-        binding.avaliblity.text = avaliblity.toString()
+        binding.avaliblity.text =avaliblity.toString()
         binding.productTitle.text = title.toString()
         binding.disc.text = description.toString()
 
-        ///fetch user data like user image , name ,address more
+        checkSwapRequestStatus(currentUserId, userId!!, productId!!)
 
+
+
+        ///fetch user data like user image , name ,address more
         fetchUserdata(userId.toString())
         ////set image
         setProductImage(imageUrls)
@@ -71,7 +76,7 @@ class ProductDetailsActivity : AppCompatActivity() {
             addToCart()
         }
 ///check request if already have
-        checkIfRequestExists(auth.currentUser!!.uid, userId!!, productId!!)
+//        checkIfRequestExists(auth.currentUser!!.uid, userId!!, productId!!)
 
         /// request for product
         binding.requestUser.setOnClickListener {
@@ -139,7 +144,7 @@ class ProductDetailsActivity : AppCompatActivity() {
     private fun addToCart() {
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser == null) {
-            Toast.makeText(this, "Please login first", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "login first", Toast.LENGTH_SHORT).show()
             Utils.hideLoadingDialog()
             return
         }
@@ -205,9 +210,9 @@ class ProductDetailsActivity : AppCompatActivity() {
         )
         requestRef.set(swapRequest)
             .addOnSuccessListener {
-
+                binding.requestUser.setText("Requested")
                 Toast.makeText(this, "Swap request sent!", Toast.LENGTH_SHORT).show()
-                checkIfRequestExists(senderId, requestId, productId)
+                checkSwapRequestStatus(senderId, requestId, productId)
                 Utils.hideLoadingDialog()
 
             }
@@ -224,27 +229,68 @@ class ProductDetailsActivity : AppCompatActivity() {
         receiverProductId: String,
     ) {
         val db = FirebaseFirestore.getInstance()
-        db.collection("swapRequests")
+  db.collection("swapRequests")
             .whereEqualTo("senderId", senderId)
             .whereEqualTo("receiverId", receiverId)
             .whereEqualTo("productId", receiverProductId)
-            .whereEqualTo("status", "pending") // optional: check only pending requests
             .get()
             .addOnSuccessListener { documents ->
-                if (!documents.isEmpty) {
-                    binding.requestUser.text = "Requested"
-                    binding.requestUser.isEnabled = false
-                } else {
-                    binding.requestUser.text = "Request for Product"
-                    binding.requestUser.isEnabled = true
-                }
+
+//                if (!documents.isEmpty) {
+//                    binding.requestUser.text = "Requested"
+//                    binding.requestUser.isEnabled = false
+//                } else {
+//                    binding.requestUser.text = "Request for Product"
+//                    binding.requestUser.isEnabled = true
+//                }
             }
             .addOnFailureListener {
                 Toast.makeText(this, "Failed to check request", Toast.LENGTH_SHORT).show()
             }
+
     }
 
+    private fun checkSwapRequestStatus(
+        senderId: String,
+        receiverId: String,
+        productId: String
+    ) {
+        val db = FirebaseFirestore.getInstance()
 
+        db.collection("swapRequests")
+            .whereEqualTo("senderId", senderId)
+            .whereEqualTo("receiverId", receiverId)
+            .whereEqualTo("productId", productId)
+            .get()
+            .addOnSuccessListener { querySnapshot ->
+                if (!querySnapshot.isEmpty) {
+                    val document = querySnapshot.documents[0]  // Assuming only one request per product
+                    val status = document.getString("status") ?: "pending"
+
+                    when (status.lowercase()) {
+                        "accepted" -> {
+                            binding.requestUser.text = "✅ Accepted"
+                        }
+                        "rejected" -> {
+                            binding.requestUser.text = "❌ Rejected"
+                        }
+                        "pending" -> {
+                            binding.requestUser.text = "⏳ Pending"
+                        }
+                        else -> {
+                            binding.requestUser.text = "Request"
+                        }
+                    }
+                } else {
+                    // No request found yet
+                    binding.requestUser.text = "Request"
+                }
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                binding.requestUser.text = "Request"
+            }
+    }
 
 
 }

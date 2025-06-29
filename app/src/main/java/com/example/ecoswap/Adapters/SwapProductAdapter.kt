@@ -70,7 +70,7 @@ class SwapProductAdapter(
                 "accepted" -> {
                     binding.accept.visibility = ViewGroup.GONE
                     binding.reject.visibility = ViewGroup.GONE
-                    binding.productStatus.text = "Accepted"
+                    binding.productStatus.text = "accepted"
                     binding.productStatus.setTextColor(ContextCompat.getColor(context, android.R.color.holo_green_dark))
                     binding.productStatus.visibility = ViewGroup.VISIBLE
                 }
@@ -88,11 +88,12 @@ class SwapProductAdapter(
                 }
             }
 
+            
 
 
             ////if request is accepted then show other user details
 
-            if (request.status == "accepted") {
+                if (request.status == "accepted") {
                 val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
                 val otherUserId = if (currentUserId == request.senderId) request.receiverId else request.senderId
 
@@ -152,6 +153,8 @@ class SwapProductAdapter(
         }
 
 
+
+
         private fun getAddressFromCoordinates(lat: Double, lon: Double, callback: (String) -> Unit) {
             val url = "https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lon&format=json"
 
@@ -167,6 +170,7 @@ class SwapProductAdapter(
                     callback(address)
                 }
 
+                
                 override fun onFailure(call: Call, e: IOException) {
                     callback("Error: ${e.localizedMessage}")
                 }

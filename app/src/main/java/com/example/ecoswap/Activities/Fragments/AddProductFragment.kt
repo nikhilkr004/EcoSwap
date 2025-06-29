@@ -3,6 +3,7 @@ package com.example.ecoswap.Activities.Fragments
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.view.*
@@ -21,6 +22,10 @@ import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
+import android.provider.MediaStore
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 
 class AddProductFragment : Fragment() {
     private val LOCATION_PERMISSION = 1001
@@ -53,10 +58,9 @@ class AddProductFragment : Fragment() {
     }.root
 
     private fun setupCategories() {
-        val cats = listOf("Books","Shoes","Shirt","T-Shirt","Toy")
+        val cats = listOf("Books", "Shoes", "Shirt", "T-Shirt", "Toy")
         binding.productType.apply {
-            setAdapter(ArrayAdapter(requireContext(),
-                android.R.layout.simple_list_item_1, cats))
+            setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, cats))
             threshold = 1
             setOnFocusChangeListener { _, f -> if (f) showDropDown() }
         }
@@ -65,16 +69,15 @@ class AddProductFragment : Fragment() {
     private fun setupRecyclerView() {
         imageAdapter = ImageAdapter(images)
         binding.productRecyclerview.apply {
-            layoutManager = LinearLayoutManager(
-                requireContext(), LinearLayoutManager.HORIZONTAL, false)
+            layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
             adapter = imageAdapter
         }
     }
 
     private fun setupClicks() {
         binding.currentLocations.setOnClickListener { checkLocation() }
-        binding.selectFileBtn.setOnClickListener   { checkCamera() }
-        binding.uploadBtn.setOnClickListener       { uploadProduct() }
+        binding.selectFileBtn.setOnClickListener { checkCamera() }
+        binding.uploadBtn.setOnClickListener { uploadProduct() }
     }
 
     private fun checkLocation() {
@@ -98,14 +101,13 @@ class AddProductFragment : Fragment() {
         ).addOnSuccessListener { loc ->
             if (loc != null) {
                 locMap = mapOf(
-                    "latitude"  to loc.latitude,
+                    "latitude" to loc.latitude,
                     "longitude" to loc.longitude
                 )
                 binding.currentLocations.text =
                     "Location: ${loc.latitude}, ${loc.longitude}"
             } else {
-                Toast.makeText(requireContext(),
-                    "Cannot fetch location", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Cannot fetch location", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -127,43 +129,54 @@ class AddProductFragment : Fragment() {
     ) {
         super.onRequestPermissionsResult(req, per, res)
         when (req) {
-            LOCATION_PERMISSION -> if (res.getOrNull(0)==PackageManager.PERMISSION_GRANTED)
+            LOCATION_PERMISSION -> if (res.getOrNull(0) == PackageManager.PERMISSION_GRANTED)
                 fetchLocation()
-            CAMERA_PERMISSION   -> if (res.getOrNull(0)==PackageManager.PERMISSION_GRANTED)
+            CAMERA_PERMISSION -> if (res.getOrNull(0) == PackageManager.PERMISSION_GRANTED)
                 pickImages.launch("image/*")
         }
     }
 
+    private fun compressImage(uri: Uri): Uri {
+        val bitmap = MediaStore.Images.Media.getBitmap(requireContext().contentResolver, uri)
+        val compressedBitmap = Bitmap.createScaledBitmap(bitmap, 800, 800, true) // Resize to 800x800
+        val file = File(requireContext().cacheDir, "compressed_image.jpg")
+        val outputStream = FileOutputStream(file)
+        compressedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream) // Compress to 80% quality
+        outputStream.close()
+        return Uri.fromFile(file)
+    }
+
     private fun uploadProduct() {
         val title = binding.productTitle.text.toString().trim()
-        val desc  = binding.productDiscriptions.text.toString().trim()
-        val cat   = binding.productType.text.toString().trim()
-        val uid   = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val db    = FirebaseFirestore.getInstance()
+        val desc = binding.productDiscriptions.text.toString().trim()
+        val cat = binding.productType.text.toString().trim()
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val db = FirebaseFirestore.getInstance()
 
-        if (title.isEmpty()||desc.isEmpty()||cat.isEmpty()
-            || images.isEmpty()||locMap==null
+        if (title.isEmpty() || desc.isEmpty() || cat.isEmpty()
+            || images.isEmpty() || locMap == null
         ) {
             Toast.makeText(requireContext(),
                 "Fill all & get location", Toast.LENGTH_SHORT).show()
             return
         }
 
-        binding.uploadBtn.isEnabled=false
-        binding.uploadBtn.text="Uploading..."
+        binding.uploadBtn.isEnabled = false
+        binding.uploadBtn.text = "Uploading..."
 
         val pid = db.collection("products").document().id
         // upload images
         val store = FirebaseStorage.getInstance()
         val urls = mutableListOf<String>()
-        var done=0
+        var done = 0
         images.forEachIndexed { idx, uri ->
+            val compressedUri = compressImage(uri)
             store.reference.child("product_images/$pid/img_$idx.jpg")
-                .putFile(uri)
+                .putFile(compressedUri)
                 .continueWithTask { it.result!!.storage.downloadUrl }
                 .addOnSuccessListener {
                     urls.add(it.toString())
-                    if (++done==images.size) {
+                    if (++done == images.size) {
                         saveProduct(pid, title, desc, cat, uid, urls)
                     }
                 }
@@ -171,26 +184,25 @@ class AddProductFragment : Fragment() {
     }
 
     private fun saveProduct(
-        pid:String, title:String, desc:String,
-        cat:String, uid:String, urls:List<String>
-    ){
+        pid: String, title: String, desc: String,
+        cat: String, uid: String, urls: List<String>
+    ) {
         val db = FirebaseFirestore.getInstance()
         db.collection("products").document(pid)
             .set(ProductData(
-                productId=pid,
-                title=title,
-                description=desc,
-                category=cat,
-                imageUrls=urls,
-                location=locMap!!,
-                postedBy=uid,
-                userName="",
-                timestamp=System.currentTimeMillis(),
-                availability="Available",
-                swapType="Free"
+                productId = pid,
+                title = title,
+                description = desc,
+                category = cat,
+                imageUrls = urls,
+                location = locMap!!,
+                postedBy = uid,
+                userName = "",
+                timestamp = System.currentTimeMillis(),
+                availability = "Available",
+                swapType = "Free"
             ))
             .addOnSuccessListener {
-
                 // ✅ Update user's EcoPoints
                 val userRef = db.collection("users").document(uid)
                 userRef.get().addOnSuccessListener { doc ->
@@ -199,19 +211,19 @@ class AddProductFragment : Fragment() {
 
                     Toast.makeText(requireContext(),
                         "Uploaded!", Toast.LENGTH_SHORT).show()
-                    binding.uploadBtn.text="Upload Product"
-                    binding.uploadBtn.isEnabled=true
+                    binding.uploadBtn.text = "Upload Product"
+                    binding.uploadBtn.isEnabled = true
                     reset()
                 }
 
             }
     }
 
-    private fun reset(){
+    private fun reset() {
         binding.productTitle.text.clear()
         binding.productDiscriptions.text.clear()
         binding.productType.text!!.clear()
         images.clear(); imageAdapter.notifyDataSetChanged()
-        locMap=null; binding.currentLocations.text="Current Location"
+        locMap = null; binding.currentLocations.text = "Current Location"
     }
 }

@@ -101,6 +101,7 @@
         android:id="@+id/callUser"
         android:layout_width="@dimen/_100sdp"
         android:layout_marginEnd="@dimen/_10sdp"
+        android:visibility="gone"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/_5sdp"
         android:layout_weight="2"
