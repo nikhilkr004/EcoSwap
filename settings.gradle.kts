@@ -11,6 +11,7 @@ pluginManagement {
         gradlePluginPortal()
 
         maven ("https://jitpack.io")
+        maven ("https://storage.zego.im/maven")
     }
 }
 dependencyResolutionManagement {
